@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>票根生成器</title>
+    <style>
+        * {margin: 0;padding: 0;box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;}
+        body {background-color: #f8f9fa;color: #333;line-height: 1.6;padding: 20px;
+            min-height: 100vh;}
+        .container {max-width: 1000px;margin: 0 auto;background-color: white;
+            border-radius: 12px;box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;}
+        .header {background-color: #fff;padding: 24px 30px;
+            border-bottom: 1px solid #eaeaea;}
+        h1 {font-size: 28px;font-weight: 600;color: #1a1a1a;margin-bottom: 4px;}
+        .subtitle {color: #666;font-size: 15px;}
+        .content {display: flex;flex-wrap: wrap;padding: 0;}
+        .controls {flex: 1;min-width: 350px;padding: 30px;border-right: 1px solid #eaeaea;}
+        .preview-container {flex: 1;min-width: 300px;padding: 30px;background-color: #fafafa;}
+        .control-group {margin-bottom: 28px;}
+        .control-group h3 {font-size: 18px;font-weight: 600;margin-bottom: 16px;
+            color: #2c2c2c;display: flex;align-items: center;}
+        .control-group h3 i {margin-right: 10px;color: #4a6ee0;}
+        .upload-area {display: flex;flex-direction: column;gap: 20px;}
+        .upload-item {display: flex;flex-direction: column;}
+        .upload-item label {font-size: 15px;font-weight: 600;margin-bottom: 10px;color: #444;}
+        .upload-control {display: flex;align-items: center;gap: 12px;}
+        .file-info {font-size: 15px;color: #555;background-color: #f5f7fa;
+            padding: 10px 16px;border-radius: 8px;flex: 1;border: 1px solid #e0e6ed;
+            min-height: 44px;display: flex;align-items: center;}
+        .btn-upload {background-color: #4a6ee0;color: white;
+            border: none;padding: 10px 20px;border-radius: 8px;
+            cursor: pointer;font-size: 15px;font-weight: 500;transition: all 0.2s;
+            display: flex;align-items: center;gap: 6px;}
+        .btn-upload:hover {background-color: #3a5ed0;transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(74, 110, 224, 0.2);}
+        .btn-upload:active {transform: translateY(0);}
+        .edge-options {display: grid;grid-template-columns: 1fr 1fr;gap: 15px;}
+        .edge-option {display: flex;align-items: center;gap: 10px;background-color: #f5f7fa;
+            padding: 12px 16px;border-radius: 8px;border: 1px solid #e0e6ed;
+            transition: all 0.2s;}
+        .edge-option:hover {border-color: #4a6ee0;}
+        .edge-option input[type="checkbox"] {width: 20px;height: 20px;cursor: pointer;
+            accent-color: #4a6ee0;}
+        .edge-option label {font-size: 15px;cursor: pointer;font-weight: 500;}
+        .slider-container {display: flex;flex-direction: column;gap: 10px;}
+        .slider-header {display: flex;justify-content: space-between;align-items: center;}
+        .slider-header label {font-size: 15px;font-weight: 600;}
+        .slider-value {font-size: 15px;font-weight: 600;color: #4a6ee0;
+            background-color: rgba(74, 110, 224, 0.1);padding: 4px 12px;
+            border-radius: 20px;}
+        input[type="range"] {width: 100%;height: 6px;border-radius: 3px;
+            background: #e0e6ed;outline: none;cursor: pointer;
+            -webkit-appearance: none;}
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;width: 24px;height: 24px;border-radius: 50%;
+            background: #4a6ee0;cursor: pointer;border: 3px solid white;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);}
+        .divider-options {display: flex;gap: 20px;}
+        .divider-option {display: flex;align-items: center;gap: 10px;
+            background-color: #f5f7fa;padding: 12px 20px;border-radius: 8px;
+            border: 1px solid #e0e6ed;transition: all 0.2s;}
+        .divider-option:hover {border-color: #4a6ee0;}
+        .divider-option input[type="radio"] {width: 20px;height: 20px;
+            cursor: pointer;accent-color: #4a6ee0;}
+        .divider-option label {font-size: 15px;cursor: pointer;font-weight: 500;}
+        .preview-area {display: flex;flex-direction: column;height: 100%;}
+        .preview-area h3 {font-size: 18px;font-weight: 600;margin-bottom: 20px;
+            color: #2c2c2c;display: flex;align-items: center;}
+        .preview-area h3 i {margin-right: 10px;color: #4a6ee0;}
+        .ticket-preview-wrapper {flex: 1;display: flex;align-items: center;
+            justify-content: center;}
+        .ticket-preview {background-color: white;border-radius: 8px;border: 1px solid #ddd;
+            position: relative;overflow: hidden;box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            width: 100%;padding-top: 33.33%; /* 1/3 = 33.33% 实现3:1长宽比 */
+        }
+        .ticket-left, .ticket-right {position: absolute;top: 0;height: 100%;}
+        .ticket-left {left: 0;}
+        .ticket-right {right: 0;}
+        .divider {position: absolute;top: 0;bottom: 0;width: 0;border-left: 2px dashed #333;}
+        .solid-divider {border-left-style: solid;}
+        
+        /* 圆形边缘样式 - 修改为透明边框 */
+        .circle-edge {position: absolute;background-color: transparent;}
+        .circle-top, .circle-bottom {left: 0;right: 0;height: 8px;}
+        .circle-top {top: -4px;}
+        .circle-bottom {bottom: -4px;}
+        .dotted-left, .dotted-right {top: 0;bottom: 0;width: 8px;}
+        .dotted-left {left: -4px;}
+        .dotted-right {right: -4px;}
+        .dot {position: absolute;width: 8px;height: 8px;background-color: transparent;border-radius: 50%;}
+        
+        /* 完整圆形条样式 - 修改为遮罩层 */
+        .full-circle-bar {position: absolute;display: flex;
+            justify-content: space-between;align-items: center;pointer-events: none;}
+        .circle-bar-top, .circle-bar-bottom {left: 0;right: 0;height: 12px;}
+        .circle-bar-top {top: -6px;}
+        .circle-bar-bottom {bottom: -6px;}
+        .circle-bar-circle {width: 12px;height: 12px;background-color: transparent;border-radius: 50%;}
+        
+        /* 遮罩层 - 用于创建挖空效果 */
+        .mask-layer {position: absolute;top: 0;left: 0;right: 0;bottom: 0;pointer-events: none;}
+        .mask-circle {position: absolute;background-color: white;border-radius: 50%;}
+        
+        /* 分割线样式元素 */
+        .split-style-top, .split-style-bottom {position: absolute;left: 0;pointer-events: none;}
+        .split-style-top {top: 0;}
+        .split-style-bottom {bottom: 0;}
+        
+        .action-buttons {display: flex;gap: 16px;padding: 30px;border-top: 1px solid #eaeaea;
+            background-color: #f9f9f9;}
+        .btn-apply, .btn-save {flex: 1;border: none;padding: 16px 24px;border-radius: 8px;
+            cursor: pointer;font-size: 16px;font-weight: 600;transition: all 0.2s;
+            display: flex;align-items: center;justify-content: center;gap: 8px;}
+        .btn-apply {background-color: #10b981;color: white;}
+        .btn-apply:hover {background-color: #0da271;transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);}
+        .btn-save {background-color: #3b82f6;color: white;}
+        .btn-save:hover {background-color: #2563eb;transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);}
+        .btn-apply:active, .btn-save:active {transform: translateY(0);}
+        .image-placeholder {width: 100%;height: 100%;display: flex;flex-direction: column;
+            align-items: center;justify-content: center;color: #999;font-size: 15px;}
+        .image-placeholder i {font-size: 48px;margin-bottom: 12px;color: #ccc;}
+        .uploaded-image {width: 100%;height: 100%;object-fit: cover;position: absolute;
+            top: 0;left: 0;cursor: move;}
+        .file-input {display: none;}
+        .dimensions-info {font-size: 14px;color: #666;margin-top: 8px;display: flex;
+            align-items: center;gap: 6px;}
+        .dimensions-info i {color: #4a6ee0;}
+        
+        /* 图片容器 - 添加overflow和相对定位 */
+        .image-container {position: absolute;top: 0;left: 0;right: 0;bottom: 0;
+            overflow: hidden;}
+        
+        /* 左右圆形条独立设置样式 */
+        .side-edge-settings {display: grid;grid-template-columns: 1fr 1fr;gap: 20px;}
+        .side-edge-group {background-color: #f9f9f9;padding: 16px;border-radius: 8px;border: 1px solid #e0e6ed;}
+        .side-edge-group h4 {font-size: 16px;margin-bottom: 12px;color: #333;text-align: center;}
+        .side-edge-option {display: flex;align-items: center;gap: 8px;margin-bottom: 10px;}
+        .side-edge-option label {font-size: 14px;cursor: pointer;font-weight: 500;}
+        
+        @media (max-width: 768px) {.content {flex-direction: column;}
+            .controls {padding-right: 0;margin-bottom: 0;border-right: none;
+                border-bottom: 1px solid #eaeaea;}
+            .action-buttons {flex-direction: column;}
+            .ticket-preview {padding-top: 33.33%;}
+            .edge-options {grid-template-columns: 1fr;}
+            .side-edge-settings {grid-template-columns: 1fr;}}
+        
+        /* 上传文件样式 */
+        .file-uploaded {background-color: #e8f5e9;border-color: #4caf50;}
+        .file-name {font-weight: 500;}
+        .file-size {font-size: 13px;color: #777;margin-left: 8px;}
+        .upload-status {display: flex;align-items: center;gap: 8px;margin-top: 4px;}
+        .upload-status i {color: #4caf50;}
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>票根生成器 - 透明分割线样式</h1>
+            <p class="subtitle">工具制作：@村里最乱炒的坏厨（由于技术不够，遇到了BUG，因此只制作了特别有限的粗糙功能，老大们谨慎食用）</p>
+        </div>
+        <div class="content">
+            <div class="controls">
+                <div class="control-group">
+                    <h3><i class="fas fa-upload"></i> 上传左侧图片</h3>
+                    <div class="upload-area">
+                        <div class="upload-item">
+                            <div class="upload-control">
+                                <div class="file-info" id="leftFileInfo">
+                                    <div>未选择文件</div>
+                                </div>
+                                <button class="btn-upload" id="leftUploadBtn">
+                                    <i class="fas fa-folder-open"></i> 选择文件
+                                </button>
+                                <input type="file" id="leftFileInput" class="file-input" accept="image/*">
+                            </div>
+                            <div class="upload-status" id="leftUploadStatus" style="display: none;">
+                                <i class="fas fa-check-circle"></i>
+                                <span>已上传</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <h3><i class="fas fa-upload"></i> 上传右侧图片</h3>
+                    <div class="upload-area">
+                        <div class="upload-item">
+                            <div class="upload-control">
+                                <div class="file-info" id="rightFileInfo">
+                                    <div>未选择文件</div>
+                                </div>
+                                <button class="btn-upload" id="rightUploadBtn">
+                                    <i class="fas fa-folder-open"></i> 选择文件
+                                </button>
+                                <input type="file" id="rightFileInput" class="file-input" accept="image/*">
+                            </div>
+                            <div class="upload-status" id="rightUploadStatus" style="display: none;">
+                                <i class="fas fa-check-circle"></i>
+                                <span>已上传</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <h3><i class="fas fa-cut"></i> 边缘设置</h3>
+                    <p style="font-size: 14px; color: #666; margin-bottom: 15px;">为左右两侧分别设置上下圆形条（挖空效果）和左右点状边缘</p>
+                    <div class="side-edge-settings">
+                        <div class="side-edge-group">
+                            <h4>左侧边缘设置</h4>
+                            <div class="side-edge-option">
+                                <input type="checkbox" id="leftTopCircleBar" checked>
+                                <label for="leftTopCircleBar">上边圆形条</label>
+                            </div>
+                            <div class="side-edge-option">
+                                <input type="checkbox" id="leftBottomCircleBar" checked>
+                                <label for="leftBottomCircleBar">下边圆形条</label>
+                            </div>
+                            <div class="side-edge-option">
+                                <input type="checkbox" id="leftDotted" checked>
+                                <label for="leftDotted">左边点状边缘</label>
+                            </div>
+                        </div>
+                        <div class="side-edge-group">
+                            <h4>右侧边缘设置</h4>
+                            <div class="side-edge-option">
+                                <input type="checkbox" id="rightTopCircleBar" checked>
+                                <label for="rightTopCircleBar">上边圆形条</label>
+                            </div>
+                            <div class="side-edge-option">
+                                <input type="checkbox" id="rightBottomCircleBar" checked>
+                                <label for="rightBottomCircleBar">下边圆形条</label>
+                            </div>
+                            <div class="side-edge-option">
+                                <input type="checkbox" id="rightDotted" checked>
+                                <label for="rightDotted">右边点状边缘</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <h3><i class="fas fa-sliders-h"></i> 分割设置</h3>
+                    <div class="slider-container">
+                        <div class="slider-header">
+                            <label for="splitRatio">分割比例:</label>
+                            <span class="slider-value" id="splitValue">35%</span>
+                        </div>
+                        <input type="range" id="splitRatio" min="0" max="100" value="35">
+                    </div>
+                    <div style="margin-top: 24px;">
+                        <h4 style="font-size: 15px; margin-bottom: 12px; color: #444;">分割线类型:</h4>
+                        <div class="divider-options">
+                            <div class="divider-option">
+                                <input type="radio" id="dashedLine" name="dividerType" checked>
+                                <label for="dashedLine">虚线</label>
+                            </div>
+                            <div class="divider-option">
+                                <input type="radio" id="solidLine" name="dividerType">
+                                <label for="solidLine">实线</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="dimensions-info">
+                    <i class="fas fa-info-circle"></i>
+                    <span>当前票根长宽比: 3:1 (宽:高)</span>
+                </div>
+            </div>
+            <div class="preview-container">
+                <div class="preview-area">
+                    <h3><i class="fas fa-eye"></i> 预览区域 (可拖动图片调整显示范围)</h3>
+                    <div class="ticket-preview-wrapper">
+                        <div class="ticket-preview" id="ticketPreview">
+                            <!-- 左侧图片区域 -->
+                            <div class="ticket-left" id="ticketLeft">
+                                <div class="image-container" id="leftImageContainer">
+                                    <div class="image-placeholder" id="leftPlaceholder">
+                                        <i class="fas fa-image"></i>
+                                        <span>左侧图片</span>
+                                    </div>
+                                    <img id="leftImage" class="uploaded-image" style="display: none;">
+                                </div>
+                            </div>
+                            <!-- 右侧图片区域 -->
+                            <div class="ticket-right" id="ticketRight">
+                                <div class="image-container" id="rightImageContainer">
+                                    <div class="image-placeholder" id="rightPlaceholder">
+                                        <i class="fas fa-image"></i>
+                                        <span>右侧图片</span>
+                                    </div>
+                                    <img id="rightImage" class="uploaded-image" style="display: none;">
+                                </div>
+                            </div>
+                            <!-- 分割线 -->
+                            <div class="divider" id="divider">
+                                <!-- 分割线样式元素 -->
+                                <div class="split-style-top" id="splitStyleTop"></div>
+                                <div class="split-style-bottom" id="splitStyleBottom"></div>
+                            </div>
+                            <!-- 遮罩层，用于创建挖空效果 -->
+                            <div id="maskLayer" class="mask-layer"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="action-buttons">
+            <button class="btn-apply" id="applyBtn">
+                <i class="fas fa-check"></i> 应用设置
+            </button>
+            <button class="btn-save" id="saveBtn">
+                <i class="fas fa-download"></i> 保存图片
+            </button>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 获取DOM元素
+            const leftUploadBtn = document.getElementById('leftUploadBtn');
+            const rightUploadBtn = document.getElementById('rightUploadBtn');
+            const leftFileInput = document.getElementById('leftFileInput');
+            const rightFileInput = document.getElementById('rightFileInput');
+            const leftFileInfo = document.getElementById('leftFileInfo');
+            const rightFileInfo = document.getElementById('rightFileInfo');
+            const leftUploadStatus = document.getElementById('leftUploadStatus');
+            const rightUploadStatus = document.getElementById('rightUploadStatus');
+            const leftImage = document.getElementById('leftImage');
+            const rightImage = document.getElementById('rightImage');
+            const leftPlaceholder = document.getElementById('leftPlaceholder');
+            const rightPlaceholder = document.getElementById('rightPlaceholder');
+            const leftImageContainer = document.getElementById('leftImageContainer');
+            const rightImageContainer = document.getElementById('rightImageContainer');
+            const splitRatio = document.getElementById('splitRatio');
+            const splitValue = document.getElementById('splitValue');
+            const dashedLine = document.getElementById('dashedLine');
+            const solidLine = document.getElementById('solidLine');
+            
+            // 新的边缘设置元素
+            const leftTopCircleBar = document.getElementById('leftTopCircleBar');
+            const leftBottomCircleBar = document.getElementById('leftBottomCircleBar');
+            const leftDotted = document.getElementById('leftDotted');
+            const rightTopCircleBar = document.getElementById('rightTopCircleBar');
+            const rightBottomCircleBar = document.getElementById('rightBottomCircleBar');
+            const rightDotted = document.getElementById('rightDotted');
+            
+            const divider = document.getElementById('divider');
+            const splitStyleTop = document.getElementById('splitStyleTop');
+            const splitStyleBottom = document.getElementById('splitStyleBottom');
+            const applyBtn = document.getElementById('applyBtn');
+            const saveBtn = document.getElementById('saveBtn');
+            const ticketLeft = document.getElementById('ticketLeft');
+            const ticketRight = document.getElementById('ticketRight');
+            const maskLayer = document.getElementById('maskLayer');
+            const ticketPreview = document.getElementById('ticketPreview');
+            
+            // 图片数据和位置
+            let leftImageSrc = '';
+            let rightImageSrc = '';
+            let splitPercent = 35;
+            let leftImagePos = { x: 0, y: 0 };
+            let rightImagePos = { x: 0, y: 0 };
+            let isDragging = false;
+            let currentDraggingImage = null;
+            let startDragPos = { x: 0, y: 0 };
+            let startImagePos = { x: 0, y: 0 };
+            
+            // 初始化
+            function init() {
+                // 设置默认分割比例
+                splitRatio.value = splitPercent;
+                splitValue.textContent = splitPercent + '%';
+                
+                // 设置默认文件信息
+                leftFileInfo.innerHTML = `
+                    <div>
+                        <span class="file-name">上传图片就可以了.jpg</span>
+                        <span class="file-size">(1.2MB)</span>
+                    </div>
+                `;
+                leftFileInfo.classList.add('file-uploaded');
+                leftUploadStatus.style.display = 'flex';
+                
+                // 设置默认图片 - 使用base64图片避免跨域问题
+                leftImage.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICAgIDxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiM0YTY4ZTAiLz4KICAgIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+QXNzZXQgQ291cnRlcjwvdGV4dD4KPC9zdmc+';
+                leftImage.style.display = 'block';
+                leftPlaceholder.style.display = 'none';
+                leftImageSrc = leftImage.src;
+                
+                // 初始化图片位置
+                updateImagePosition(leftImage, leftImagePos);
+                updateImagePosition(rightImage, rightImagePos);
+                
+                // 更新预览
+                updatePreview();
+                
+                // 设置事件监听
+                setupEventListeners();
+            }
+            
+            // 设置事件监听
+            function setupEventListeners() {
+                // 左侧上传按钮点击
+                leftUploadBtn.addEventListener('click', () => leftFileInput.click());
+                
+                // 右侧上传按钮点击
+                rightUploadBtn.addEventListener('click', () => rightFileInput.click());
+                
+                // 左侧文件选择变化
+                leftFileInput.addEventListener('change', function(e) {
+                    if (e.target.files.length) {
+                        handleFileSelect(e.target.files[0], 'left');
+                    }
+                });
+                
+                // 右侧文件选择变化
+                rightFileInput.addEventListener('change', function(e) {
+                    if (e.target.files.length) {
+                        handleFileSelect(e.target.files[0], 'right');
+                    }
+                });
+                
+                // 分割比例滑块变化
+                splitRatio.addEventListener('input', function() {
+                    splitPercent = parseInt(this.value);
+                    splitValue.textContent = splitPercent + '%';
+                    updatePreview();
+                });
+                
+                // 分割线类型变化
+                dashedLine.addEventListener('change', updatePreview);
+                solidLine.addEventListener('change', updatePreview);
+                
+                // 边缘设置变化
+                leftTopCircleBar.addEventListener('change', updatePreview);
+                leftBottomCircleBar.addEventListener('change', updatePreview);
+                leftDotted.addEventListener('change', updatePreview);
+                rightTopCircleBar.addEventListener('change', updatePreview);
+                rightBottomCircleBar.addEventListener('change', updatePreview);
+                rightDotted.addEventListener('change', updatePreview);
+                
+                // 应用设置按钮点击
+                applyBtn.addEventListener('click', applySettings);
+                
+                // 保存图片按钮点击
+                saveBtn.addEventListener('click', saveImage);
+                
+                // 图片拖拽事件
+                setupDragEvents(leftImage, leftImageContainer, leftImagePos);
+                setupDragEvents(rightImage, rightImageContainer, rightImagePos);
+            }
+            
+            // 设置图片拖拽事件
+            function setupDragEvents(imgElement, container, positionObj) {
+                imgElement.addEventListener('mousedown', startDrag);
+                imgElement.addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    startDrag(e.touches[0]);
+                });
+                
+                function startDrag(e) {
+                    if (imgElement.style.display === 'none') return;
+                    
+                    isDragging = true;
+                    currentDraggingImage = imgElement;
+                    startDragPos.x = e.clientX;
+                    startDragPos.y = e.clientY;
+                    startImagePos.x = positionObj.x;
+                    startImagePos.y = positionObj.y;
+                    
+                    // 添加事件监听
+                    document.addEventListener('mousemove', onDrag);
+                    document.addEventListener('touchmove', function(e) {
+                        e.preventDefault();
+                        onDrag(e.touches[0]);
+                    });
+                    document.addEventListener('mouseup', stopDrag);
+                    document.addEventListener('touchend', stopDrag);
+                }
+                
+                function onDrag(e) {
+                    if (!isDragging || currentDraggingImage !== imgElement) return;
+                    
+                    const deltaX = e.clientX - startDragPos.x;
+                    const deltaY = e.clientY - startDragPos.y;
+                    
+                    // 计算新位置
+                    positionObj.x = startImagePos.x + deltaX;
+                    positionObj.y = startImagePos.y + deltaY;
+                    
+                    // 应用位置
+                    updateImagePosition(imgElement, positionObj);
+                }
+                
+                function stopDrag() {
+                    isDragging = false;
+                    currentDraggingImage = null;
+                    
+                    // 移除事件监听
+                    document.removeEventListener('mousemove', onDrag);
+                    document.removeEventListener('touchmove', onDrag);
+                    document.removeEventListener('mouseup', stopDrag);
+                    document.removeEventListener('touchend', stopDrag);
+                }
+            }
+            
+            // 更新图片位置
+            function updateImagePosition(imgElement, position) {
+                imgElement.style.transform = `translate(${position.x}px, ${position.y}px)`;
+            }
+            
+            // 处理文件选择
+            function handleFileSelect(file, side) {
+                if (!file.type.match('image.*')) {
+                    alert('请选择图片文件！支持JPG、PNG格式');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    if (side === 'left') {
+                        leftImageSrc = e.target.result;
+                        leftImage.src = leftImageSrc;
+                        leftImage.style.display = 'block';
+                        leftPlaceholder.style.display = 'none';
+                        
+                        // 重置位置
+                        leftImagePos = { x: 0, y: 0 };
+                        updateImagePosition(leftImage, leftImagePos);
+                        
+                        // 更新文件信息
+                        leftFileInfo.innerHTML = `
+                            <div>
+                                <span class="file-name">${file.name}</span>
+                                <span class="file-size">(${formatFileSize(file.size)})</span>
+                            </div>
+                        `;
+                        leftFileInfo.classList.add('file-uploaded');
+                        leftUploadStatus.style.display = 'flex';
+                    } else {
+                        rightImageSrc = e.target.result;
+                        rightImage.src = rightImageSrc;
+                        rightImage.style.display = 'block';
+                        rightPlaceholder.style.display = 'none';
+                        
+                        // 重置位置
+                        rightImagePos = { x: 0, y: 0 };
+                        updateImagePosition(rightImage, rightImagePos);
+                        
+                        // 更新文件信息
+                        rightFileInfo.innerHTML = `
+                            <div>
+                                <span class="file-name">${file.name}</span>
+                                <span class="file-size">(${formatFileSize(file.size)})</span>
+                            </div>
+                        `;
+                        rightFileInfo.classList.add('file-uploaded');
+                        rightUploadStatus.style.display = 'flex';
+                    }
+                    updatePreview();
+                };
+                reader.readAsDataURL(file);
+            }
+            
+            // 格式化文件大小
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+            }
+            
+            // 创建遮罩层（挖空效果）
+            function createMask() {
+                // 清空现有的遮罩
+                maskLayer.innerHTML = '';
+                
+                const preview = document.getElementById('ticketPreview');
+                const rect = preview.getBoundingClientRect();
+                const width = rect.width;
+                const height = rect.height;
+                const leftWidth = width * splitPercent / 100;
+                const rightWidth = width - leftWidth;
+                
+                // 左侧上边圆形条挖空
+                if (leftTopCircleBar.checked) {
+                    const circleRadius = 6; // 圆形半径
+                    const circleCount = Math.floor(leftWidth / (circleRadius * 2)) + 1;
+                    
+                    for (let i = 0; i < circleCount; i++) {
+                        const circle = document.createElement('div');
+                        circle.className = 'mask-circle';
+                        circle.style.width = `${circleRadius * 2}px`;
+                        circle.style.height = `${circleRadius * 2}px`;
+                        circle.style.left = `${i * circleRadius * 2 - circleRadius}px`;
+                        circle.style.top = `-${circleRadius}px`;
+                        maskLayer.appendChild(circle);
+                    }
+                }
+                
+                // 左侧下边圆形条挖空
+                if (leftBottomCircleBar.checked) {
+                    const circleRadius = 6;
+                    const circleCount = Math.floor(leftWidth / (circleRadius * 2)) + 1;
+                    
+                    for (let i = 0; i < circleCount; i++) {
+                        const circle = document.createElement('div');
+                        circle.className = 'mask-circle';
+                        circle.style.width = `${circleRadius * 2}px`;
+                        circle.style.height = `${circleRadius * 2}px`;
+                        circle.style.left = `${i * circleRadius * 2 - circleRadius}px`;
+                        circle.style.bottom = `-${circleRadius}px`;
+                        maskLayer.appendChild(circle);
+                    }
+                }
+                
+                // 左侧点状边缘挖空
+                if (leftDotted.checked) {
+                    const dotRadius = 4;
+                    const dotsCount = Math.floor(height / 16);
+                    
+                    for (let i = 0; i < dotsCount; i++) {
+                        const dot = document.createElement('div');
+                        dot.className = 'mask-circle';
+                        dot.style.width = `${dotRadius * 2}px`;
+                        dot.style.height = `${dotRadius * 2}px`;
+                        dot.style.left = `-${dotRadius}px`;
+                        dot.style.top = `${i * 16}px`;
+                        maskLayer.appendChild(dot);
+                    }
+                }
+                
+                // 右侧上边圆形条挖空
+                if (rightTopCircleBar.checked) {
+                    const circleRadius = 6;
+                    const circleCount = Math.floor(rightWidth / (circleRadius * 2)) + 1;
+                    
+                    for (let i = 0; i < circleCount; i++) {
+                        const circle = document.createElement('div');
+                        circle.className = 'mask-circle';
+                        circle.style.width = `${circleRadius * 2}px`;
+                        circle.style.height = `${circleRadius * 2}px`;
+                        circle.style.left = `${leftWidth + i * circleRadius * 2 - circleRadius}px`;
+                        circle.style.top = `-${circleRadius}px`;
+                        maskLayer.appendChild(circle);
+                    }
+                }
+                
+                // 右侧下边圆形条挖空
+                if (rightBottomCircleBar.checked) {
+                    const circleRadius = 6;
+                    const circleCount = Math.floor(rightWidth / (circleRadius * 2)) + 1;
+                    
+                    for (let i = 0; i < circleCount; i++) {
+                        const circle = document.createElement('div');
+                        circle.className = 'mask-circle';
+                        circle.style.width = `${circleRadius * 2}px`;
+                        circle.style.height = `${circleRadius * 2}px`;
+                        circle.style.left = `${leftWidth + i * circleRadius * 2 - circleRadius}px`;
+                        circle.style.bottom = `-${circleRadius}px`;
+                        maskLayer.appendChild(circle);
+                    }
+                }
+                
+                // 右侧点状边缘挖空
+                if (rightDotted.checked) {
+                    const dotRadius = 4;
+                    const dotsCount = Math.floor(height / 16);
+                    
+                    for (let i = 0; i < dotsCount; i++) {
+                        const dot = document.createElement('div');
+                        dot.className = 'mask-circle';
+                        dot.style.width = `${dotRadius * 2}px`;
+                        dot.style.height = `${dotRadius * 2}px`;
+                        dot.style.right = `-${dotRadius}px`;
+                        dot.style.top = `${i * 16}px`;
+                        maskLayer.appendChild(dot);
+                    }
+                }
+            }
+            
+            // 更新分割线样式
+            function updateSplitStyle() {
+                // 清空现有样式
+                splitStyleTop.innerHTML = '';
+                splitStyleBottom.innerHTML = '';
+            }
+            
+            // 更新预览
+            function updatePreview() {
+                // 更新分割比例
+                const leftWidth = splitPercent + '%';
+                const rightWidth = (100 - splitPercent) + '%';
+                ticketLeft.style.width = leftWidth;
+                ticketRight.style.width = rightWidth;
+                
+                // 更新分割线位置
+                divider.style.left = leftWidth;
+                
+                // 更新分割线样式
+                if (solidLine.checked) {
+                    divider.classList.add('solid-divider');
+                } else {
+                    divider.classList.remove('solid-divider');
+                }
+                
+                // 更新分割线样式
+                updateSplitStyle();
+                
+                // 创建遮罩层（挖空效果）
+                createMask();
+            }
+            
+            // 应用设置
+            function applySettings() {
+                updatePreview();
+                
+                // 添加应用成功的视觉反馈
+                const originalText = applyBtn.innerHTML;
+                applyBtn.innerHTML = '<i class="fas fa-check"></i> 已应用';
+                applyBtn.style.backgroundColor = '#0da271';
+                setTimeout(() => {
+                    applyBtn.innerHTML = originalText;
+                    applyBtn.style.backgroundColor = '#10b981';
+                }, 1500);
+            }
+            
+            // 保存图片
+            function saveImage() {
+                if (!leftImageSrc && !rightImageSrc) {
+                    alert('请至少上传一张图片！');
+                    return;
+                }
+                
+                try {
+                    // 创建临时canvas
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // 设置canvas尺寸为3:1比例
+                    const width = 900; // 设置固定宽度
+                    const height = Math.round(width / 3); // 3:1比例，高度是宽度的1/3
+                    canvas.width = width;
+                    canvas.height = height;
+                    
+                    // 绘制白色背景
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    // 计算左侧和右侧区域的尺寸
+                    const leftWidth = canvas.width * splitPercent / 100;
+                    const rightWidth = canvas.width - leftWidth;
+                    
+                    // 保存绘制的Promise
+                    const drawPromises = [];
+                    
+                    // 绘制左侧图片
+                    if (leftImageSrc) {
+                        const leftImg = new Image();
+                        leftImg.crossOrigin = "anonymous"; // 设置跨域属性
+                        
+                        drawPromises.push(new Promise((resolve) => {
+                            leftImg.onload = function() {
+                                ctx.save();
+                                ctx.beginPath();
+                                ctx.rect(0, 0, leftWidth, canvas.height);
+                                ctx.clip();
+                                
+                                // 计算图片缩放比例
+                                const scale = Math.max(leftWidth / leftImg.width, canvas.height / leftImg.height);
+                                const scaledWidth = leftImg.width * scale;
+                                const scaledHeight = leftImg.height * scale;
+                                
+                                // 计算拖拽偏移
+                                const containerWidth = leftImageContainer.offsetWidth || 1;
+                                const containerHeight = leftImageContainer.offsetHeight || 1;
+                                const maxOffsetX = Math.max(0, scaledWidth - leftWidth);
+                                const maxOffsetY = Math.max(0, scaledHeight - canvas.height);
+                                const canvasOffsetX = (leftImagePos.x / containerWidth) * maxOffsetX;
+                                const canvasOffsetY = (leftImagePos.y / containerHeight) * maxOffsetY;
+                                
+                                // 计算绘制位置
+                                const drawX = (leftWidth - scaledWidth) / 2 - canvasOffsetX;
+                                const drawY = (canvas.height - scaledHeight) / 2 - canvasOffsetY;
+                                
+                                // 绘制图片
+                                ctx.drawImage(leftImg, drawX, drawY, scaledWidth, scaledHeight);
+                                ctx.restore();
+                                resolve();
+                            };
+                            
+                            leftImg.onerror = function() {
+                                console.error('左侧图片加载失败');
+                                // 如果图片加载失败，绘制一个默认背景
+                                ctx.save();
+                                ctx.fillStyle = '#4a6ee0';
+                                ctx.fillRect(0, 0, leftWidth, canvas.height);
+                                ctx.restore();
+                                resolve();
+                            };
+                            
+                            leftImg.src = leftImageSrc;
+                        }));
+                    }
+                    
+                    // 绘制右侧图片
+                    if (rightImageSrc) {
+                        const rightImg = new Image();
+                        rightImg.crossOrigin = "anonymous"; // 设置跨域属性
+                        
+                        drawPromises.push(new Promise((resolve) => {
+                            rightImg.onload = function() {
+                                ctx.save();
+                                ctx.beginPath();
+                                ctx.rect(leftWidth, 0, rightWidth, canvas.height);
+                                ctx.clip();
+                                
+                                // 计算图片缩放比例
+                                const scale = Math.max(rightWidth / rightImg.width, canvas.height / rightImg.height);
+                                const scaledWidth = rightImg.width * scale;
+                                const scaledHeight = rightImg.height * scale;
+                                
+                                // 计算拖拽偏移
+                                const containerWidth = rightImageContainer.offsetWidth || 1;
+                                const containerHeight = rightImageContainer.offsetHeight || 1;
+                                const maxOffsetX = Math.max(0, scaledWidth - rightWidth);
+                                const maxOffsetY = Math.max(0, scaledHeight - canvas.height);
+                                const canvasOffsetX = (rightImagePos.x / containerWidth) * maxOffsetX;
+                                const canvasOffsetY = (rightImagePos.y / containerHeight) * maxOffsetY;
+                                
+                                // 计算绘制位置
+                                const drawX = leftWidth + (rightWidth - scaledWidth) / 2 - canvasOffsetX;
+                                const drawY = (canvas.height - scaledHeight) / 2 - canvasOffsetY;
+                                
+                                // 绘制图片
+                                ctx.drawImage(rightImg, drawX, drawY, scaledWidth, scaledHeight);
+                                ctx.restore();
+                                resolve();
+                            };
+                            
+                            rightImg.onerror = function() {
+                                console.error('右侧图片加载失败');
+                                // 如果图片加载失败，绘制一个默认背景
+                                ctx.save();
+                                ctx.fillStyle = '#10b981';
+                                ctx.fillRect(leftWidth, 0, rightWidth, canvas.height);
+                                ctx.restore();
+                                resolve();
+                            };
+                            
+                            rightImg.src = rightImageSrc;
+                        }));
+                    }
+                    
+                    // 等待所有图片绘制完成
+                    Promise.all(drawPromises).then(() => {
+                        // 绘制分割线
+                        ctx.strokeStyle = '#333';
+                        ctx.lineWidth = 2;
+                        if (dashedLine.checked) {
+                            ctx.setLineDash([5, 5]);
+                        } else {
+                            ctx.setLineDash([]);
+                        }
+                        ctx.beginPath();
+                        ctx.moveTo(leftWidth, 0);
+                        ctx.lineTo(leftWidth, canvas.height);
+                        ctx.stroke();
+                        
+                        // 绘制遮罩（挖空效果）
+                        drawMask(ctx, canvas.width, canvas.height, leftWidth);
+                        
+                        // 创建下载链接
+                        const link = document.createElement('a');
+                        link.download = '票根设计-' + new Date().getTime() + '.png';
+                        link.href = canvas.toDataURL('image/png');
+                        link.click();
+                        
+                        // 添加保存成功的视觉反馈
+                        const originalText = saveBtn.innerHTML;
+                        saveBtn.innerHTML = '<i class="fas fa-check"></i> 已保存';
+                        saveBtn.style.backgroundColor = '#1d4ed8';
+                        setTimeout(() => {
+                            saveBtn.innerHTML = originalText;
+                            saveBtn.style.backgroundColor = '#3b82f6';
+                        }, 1500);
+                    }).catch(error => {
+                        console.error('保存图片时出错:', error);
+                        alert('保存图片时出错，请重试');
+                    });
+                    
+                } catch (error) {
+                    console.error('保存图片时出现异常:', error);
+                    alert('保存图片时出错，请重试');
+                }
+            }
+            
+            // 绘制遮罩（挖空效果）
+            function drawMask(ctx, width, height, leftWidth) {
+                const circleRadius = 6; // 圆形半径
+                const dotRadius = 4; // 点状边缘半径
+                const rightWidth = width - leftWidth;
+                
+                // 设置合成模式为destination-out，这样绘制的内容会变成透明
+                ctx.globalCompositeOperation = 'destination-out';
+                
+                // 左侧上边圆形条挖空
+                if (leftTopCircleBar.checked) {
+                    const circleCount = Math.floor(leftWidth / (circleRadius * 2)) + 1;
+                    for (let i = 0; i < circleCount; i++) {
+                        const x = i * circleRadius * 2;
+                        ctx.beginPath();
+                        ctx.arc(x, 0, circleRadius, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+                
+                // 左侧下边圆形条挖空
+                if (leftBottomCircleBar.checked) {
+                    const circleCount = Math.floor(leftWidth / (circleRadius * 2)) + 1;
+                    for (let i = 0; i < circleCount; i++) {
+                        const x = i * circleRadius * 2;
+                        ctx.beginPath();
+                        ctx.arc(x, height, circleRadius, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+                
+                // 左侧点状边缘挖空
+                if (leftDotted.checked) {
+                    const dotsCount = Math.floor(height / 16);
+                    for (let i = 0; i < dotsCount; i++) {
+                        const y = i * 16;
+                        ctx.beginPath();
+                        ctx.arc(0, y, dotRadius, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+                
+                // 右侧上边圆形条挖空
+                if (rightTopCircleBar.checked) {
+                    const circleCount = Math.floor(rightWidth / (circleRadius * 2)) + 1;
+                    for (let i = 0; i < circleCount; i++) {
+                        const x = leftWidth + i * circleRadius * 2;
+                        ctx.beginPath();
+                        ctx.arc(x, 0, circleRadius, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+                
+                // 右侧下边圆形条挖空
+                if (rightBottomCircleBar.checked) {
+                    const circleCount = Math.floor(rightWidth / (circleRadius * 2)) + 1;
+                    for (let i = 0; i < circleCount; i++) {
+                        const x = leftWidth + i * circleRadius * 2;
+                        ctx.beginPath();
+                        ctx.arc(x, height, circleRadius, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+                
+                // 右侧点状边缘挖空
+                if (rightDotted.checked) {
+                    const dotsCount = Math.floor(height / 16);
+                    for (let i = 0; i < dotsCount; i++) {
+                        const y = i * 16;
+                        ctx.beginPath();
+                        ctx.arc(width, y, dotRadius, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+                
+                // 恢复合成模式
+                ctx.globalCompositeOperation = 'source-over';
+            }
+            
+            // 初始化应用
+            init();
+        });
+    </script>
+</body>
+</html>
